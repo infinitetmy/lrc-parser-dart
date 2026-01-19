@@ -1,0 +1,3 @@
+[submodule "grammar"]
+	path = grammar
+	url = https://github.com/infinitetmy/lrc-grammar.git
