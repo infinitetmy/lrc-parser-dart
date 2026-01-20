@@ -118,12 +118,3 @@ logs/results.json
 .dart_tool/bisect_dart/
 doc/api/
 runtime/tools/heapsnapshot/.dart_tool
-
-# gclient specific files
-.cipd
-.gclient
-.gclient_*
-
-# Gemini CLI
-.gemini
-.geminiignore
