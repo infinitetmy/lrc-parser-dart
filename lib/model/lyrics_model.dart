@@ -1,3 +1,21 @@
+/// Represents an error encountered during parsing.
+class LrcParseError {
+  final int line;
+  final int column;
+  final String message;
+  final String invalidCharacter;
+
+  LrcParseError({
+    required this.line,
+    required this.column,
+    required this.message,
+    required this.invalidCharacter,
+  });
+
+  @override
+  String toString() => 'Line $line:$column - $message ($invalidCharacter)';
+}
+
 /// Defines the complexity of the LRC file.
 enum LrcType {
   /// **Normal**: Contains only line-level timestamps.
@@ -27,7 +45,7 @@ class LrcWord {
 class LrcLine implements Comparable<LrcLine> {
   /// The start time of the line.
   final Duration timestamp;
-  
+
   /// The breakdown of words/syllables in this line.
   /// For 'Normal' lines, this list contains exactly one LrcWord with the full text.
   final List<LrcWord> words;
@@ -49,11 +67,13 @@ class LrcFile {
   final LrcType type;
   final Map<String, String> tags;
   final List<LrcLine> lines;
+  final List<LrcParseError> errors;
 
   LrcFile({
     required this.type,
     required this.tags,
     required this.lines,
+    this.errors = const [],
   });
 
   // --- Standard Tag Getters ---
@@ -73,15 +93,8 @@ class LrcFile {
   /// lr: Lyricist of the song
   String? get lyricist => tags['lr'];
 
-  /// length: Length of the song (mm:ss)
-  String? get length => tags['length'];
-
   /// by: Author of the LRC file (not the song)
   String? get creator => tags['by'];
-
-  /// offset: Global offset value in milliseconds (+/-).
-  /// Returns the raw string. parsed int can be added if needed.
-  String? get offset => tags['offset'];
 
   /// re/tool: The player or editor that created the LRC file
   String? get tool => tags['re'] ?? tags['tool'];
@@ -91,4 +104,39 @@ class LrcFile {
 
   /// #: Comments (The parser usually stores these with key '#')
   String? get comment => tags['#'];
+
+  /// length: Length of the song.
+  /// Parsed from "mm:ss" string (e.g., "03:45" -> Duration(minutes: 3, seconds: 45))
+  Duration? get length {
+    final val = tags['length']?.trim();
+    if (val == null) return null;
+
+    try {
+      final parts = val.split(':');
+      if (parts.length == 2) {
+        final min = int.parse(parts[0]);
+        final sec = int.parse(parts[1]);
+        return Duration(minutes: min, seconds: sec);
+      }
+      // If needed, handle mm:ss.xx logic here, though standard is usually mm:ss
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// offset: Global offset value for the lyric times.
+  /// Parsed from milliseconds string (e.g., "+500", "-200").
+  Duration? get offset {
+    final val = tags['offset']?.trim();
+    if (val == null) return null;
+
+    try {
+      // int.parse handles "+" and "-" prefixes automatically
+      final milliseconds = int.parse(val);
+      return Duration(milliseconds: milliseconds);
+    } catch (e) {
+      return null;
+    }
+  }
 }

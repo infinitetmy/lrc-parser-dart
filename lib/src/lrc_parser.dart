@@ -1,21 +1,23 @@
+import 'package:antlr4/antlr4.dart';
 import '../generated/LRCMixedParser.dart';
 import '../generated/LRCMixedParserBaseVisitor.dart';
-import '../model/lyrics_model.dart'; 
+import '../model/lyrics_model.dart';
 
 class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
   final Map<String, String> _tags = {};
   final List<LrcLine> _lines = [];
+  final List<LrcParseError> _semanticErrors = [];
 
   // Counters for classification
   int _lineLevelCount = 0; // Counts standard lines
   int _wordLevelCount = 0; // Counts word-synced lines
 
-  LrcFile getResult() {
+  LrcFile getResult(List<LrcParseError> syntaxErrors) {
     _lines.sort();
-    
+
     // logic to determine LrcType
     LrcType type;
-    
+
     if (_wordLevelCount == 0) {
       type = LrcType.normal;
     } else if (_lineLevelCount > 0 && _wordLevelCount > 0) {
@@ -24,22 +26,34 @@ class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
       type = LrcType.extended;
     }
 
-    return LrcFile(
-      type: type,
-      tags: _tags,
-      lines: _lines,
-    );
+    final allErrors = [...syntaxErrors, ..._semanticErrors];
+    allErrors.sort((a, b) => a.line.compareTo(b.line));
+
+    return LrcFile(type: type, tags: _tags, lines: _lines, errors: allErrors);
   }
 
   // --- Metadata ---
   @override
   void visitIdLine(IdLineContext ctx) {
-    final key = ctx.key?.text?.toLowerCase() ?? "";
+    final rawKey = ctx.key?.text;
+
+    final key = ctx.key?.text ?? "";
     final value = ctx.idValue()?.text ?? "";
-    
-    if (key.isNotEmpty) {
-      _tags[key] = value;
+
+    // CHECK FOR DUPLICATES
+    if (_tags.containsKey(key)) {
+      _semanticErrors.add(
+        LrcParseError(
+          line: ctx.start?.line ?? -1,
+          column: ctx.start?.charPositionInLine ?? -1,
+          message:
+              "Duplicate tag key found: '$rawKey'. Previous value was '${_tags[key]}'. Overwriting with '$value'.",
+          invalidCharacter: rawKey ?? "",
+        ),
+      );
     }
+
+    _tags[key] = value;
   }
 
   // --- Line Level Lyrics ---
@@ -58,12 +72,19 @@ class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
 
     // Line level lines might have multiple headers [00:01][00:10]Text
     for (var timeTagCtx in ctx.timeTags()) {
-      final time = _parseTimeTag(timeTagCtx);
+      final time = _parseDurationWithContext(
+        timeTagCtx,
+        timeTagCtx.min,
+        timeTagCtx.sec,
+        timeTagCtx.ms,
+      );
       if (time != null) {
-        _lines.add(LrcLine(
-          timestamp: time,
-          words: [LrcWord(timestamp: time, text: fullText)],
-        ));
+        _lines.add(
+          LrcLine(
+            timestamp: time,
+            words: [LrcWord(timestamp: time, text: fullText)],
+          ),
+        );
       }
     }
   }
@@ -73,11 +94,16 @@ class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
   void visitWordLevelTimeLine(WordLevelTimeLineContext ctx) {
     _wordLevelCount++;
 
-    final lineStartTime = _parseTimeTag(ctx.timeTag());
+    final lineStartTime = _parseDurationWithContext(
+      ctx.timeTag(),
+      ctx.timeTag()?.min,
+      ctx.timeTag()?.sec,
+      ctx.timeTag()?.ms,
+    );
     if (lineStartTime == null) return;
 
     final List<LrcWord> words = [];
-    
+
     Duration currentWordTime = lineStartTime;
     StringBuffer currentWordBuffer = StringBuffer();
 
@@ -85,28 +111,33 @@ class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
       final child = ctx.getChild(i);
 
       if (child is SubtimeTagContext) {
-        final newTime = _parseSubTimeTag(child);
+        final newTime = _parseDurationWithContext(
+          child,
+          child.min,
+          child.sec,
+          child.ms,
+        );
         if (newTime != null) {
           if (currentWordBuffer.isNotEmpty) {
-            words.add(LrcWord(
-              timestamp: currentWordTime, 
-              text: currentWordBuffer.toString()
-            ));
+            words.add(
+              LrcWord(
+                timestamp: currentWordTime,
+                text: currentWordBuffer.toString(),
+              ),
+            );
             currentWordBuffer.clear();
           }
           currentWordTime = newTime;
         }
-      } 
-      else if (child is LyricsContext) {
+      } else if (child is LyricsContext) {
         currentWordBuffer.write(child.text);
       }
     }
 
     if (currentWordBuffer.isNotEmpty) {
-      words.add(LrcWord(
-        timestamp: currentWordTime, 
-        text: currentWordBuffer.toString()
-      ));
+      words.add(
+        LrcWord(timestamp: currentWordTime, text: currentWordBuffer.toString()),
+      );
     }
 
     _lines.add(LrcLine(timestamp: lineStartTime, words: words));
@@ -115,7 +146,12 @@ class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
   // --- Empty Content ---
   @override
   void visitEmptyContentTimeLine(EmptyContentTimeLineContext ctx) {
-    final time = _parseTimeTag(ctx.timeTag());
+    final time = _parseDurationWithContext(
+      ctx.timeTag(),
+      ctx.timeTag()?.min,
+      ctx.timeTag()?.sec,
+      ctx.timeTag()?.ms,
+    );
     if (time != null) {
       _lines.add(LrcLine(timestamp: time, words: []));
     }
@@ -123,24 +159,48 @@ class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
 
   // --- Helpers ---
 
-  Duration? _parseTimeTag(TimeTagContext? ctx) {
-    if (ctx == null) return null;
-    return _parseDurationParts(ctx.min?.text, ctx.sec?.text, ctx.ms?.text);
-  }
+  Duration? _parseDurationWithContext(
+    ParserRuleContext? ctx,
+    Token? minToken,
+    Token? secToken,
+    Token? msToken,
+  ) {
+    if (ctx == null || minToken == null || secToken == null || msToken == null) {
+      return null;
+    }
 
-  Duration? _parseSubTimeTag(SubtimeTagContext? ctx) {
-    if (ctx == null) return null;
-    return _parseDurationParts(ctx.min?.text, ctx.sec?.text, ctx.ms?.text);
-  }
+    final msText = msToken.text ?? '0';
 
-  Duration? _parseDurationParts(String? minStr, String? secStr, String? msStr) {
+    if (msText.length > 3) {
+      _semanticErrors.add(
+        LrcParseError(
+          line: ctx.start?.line ?? -1,
+          column: ctx.start?.charPositionInLine ?? -1,
+          message:
+              "Timestamp precision too high: found ${msText.length} digits in '$msText'. Standard limit is 3.",
+          invalidCharacter: msText,
+        ),
+      );
+    }
+
     try {
-      final min = int.parse(minStr ?? '0');
-      final sec = int.parse(secStr ?? '0');
-      final msRaw = msStr ?? '0';
-      int ms = int.parse(msRaw);
-      if (msRaw.length == 2) ms *= 10; 
-      return Duration(minutes: min, seconds: sec, milliseconds: ms);
+      final min = int.parse(minToken.text ?? '0');
+      final sec = int.parse(secToken.text ?? '0');
+
+      String microsecondStr = msText;
+
+      if (microsecondStr.length > 6) {
+        microsecondStr = microsecondStr.substring(0, 6);
+      } else {
+        microsecondStr = microsecondStr.padRight(6, '0');
+      }
+
+      final fractionalMicros = int.parse(microsecondStr);
+
+      final int totalMicros =
+          (min * 60 * 1000000) + (sec * 1000000) + fractionalMicros;
+
+      return Duration(microseconds: totalMicros);
     } catch (e) {
       return null;
     }
