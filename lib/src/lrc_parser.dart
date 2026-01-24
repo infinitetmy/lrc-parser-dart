@@ -107,6 +107,19 @@ class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
     Duration currentWordTime = lineStartTime;
     StringBuffer currentWordBuffer = StringBuffer();
 
+    void commitWord(Duration nextTime) {
+      if (currentWordBuffer.isNotEmpty) {
+        words.add(
+          LrcWord(
+            timestamp: currentWordTime,
+            text: currentWordBuffer.toString(),
+          ),
+        );
+        currentWordBuffer.clear();
+      }
+      currentWordTime = nextTime;
+    }
+
     for (var i = 0; i < ctx.childCount; i++) {
       final child = ctx.getChild(i);
 
@@ -117,17 +130,37 @@ class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
           child.sec,
           child.ms,
         );
+
         if (newTime != null) {
-          if (currentWordBuffer.isNotEmpty) {
-            words.add(
-              LrcWord(
-                timestamp: currentWordTime,
-                text: currentWordBuffer.toString(),
+          final timeStr = child.text;
+
+          // Check if the new timestamp is earlier than the previous one
+          if (newTime < currentWordTime) {
+            _semanticErrors.add(
+              LrcParseError(
+                line: child.start?.line ?? -1,
+                column: child.start?.charPositionInLine ?? -1,
+                message:
+                    "Sub-timestamp flow error: ($newTime) is earlier than previous timestamp ($currentWordTime).",
+                invalidCharacter: timeStr,
               ),
             );
-            currentWordBuffer.clear();
           }
-          currentWordTime = newTime;
+
+          // Check if the new timestamp is earlier than the line start time
+          if (newTime < lineStartTime) {
+            _semanticErrors.add(
+              LrcParseError(
+                line: child.start?.line ?? -1,
+                column: child.start?.charPositionInLine ?? -1,
+                message:
+                    "Sub-timestamp logic error: ($newTime) is earlier than the main line start time ($lineStartTime).",
+                invalidCharacter: timeStr,
+              ),
+            );
+          }
+
+          commitWord(newTime);
         }
       } else if (child is LyricsContext) {
         currentWordBuffer.write(child.text);
@@ -165,7 +198,10 @@ class LrcProcessor extends LRCMixedParserBaseVisitor<void> {
     Token? secToken,
     Token? msToken,
   ) {
-    if (ctx == null || minToken == null || secToken == null || msToken == null) {
+    if (ctx == null ||
+        minToken == null ||
+        secToken == null ||
+        msToken == null) {
       return null;
     }
 
