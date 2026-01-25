@@ -2,7 +2,7 @@ import '../model/lyrics_model.dart';
 
 /// A mutable wrapper around LRC data to allow editing, time-shifting,
 /// scaling, and re-exporting to string format.
-class LrcManipulator {
+class LrcEditor {
   /// Mutable map of tags
   final Map<String, String> tags;
 
@@ -15,16 +15,16 @@ class LrcManipulator {
   bool useHighPrecision = false;
 
   /// Constructor: specific empty init
-  LrcManipulator({Map<String, String>? tags, List<LrcLine>? lines})
+  LrcEditor({Map<String, String>? tags, List<LrcLine>? lines})
     : tags = tags ?? {},
       lines = lines ?? [];
 
   /// Factory: Initialize from an existing immutable LrcFile model
-  factory LrcManipulator.fromModel(LrcFile model) {
+  factory LrcEditor.fromModel(LrcFile model) {
     final newTags = Map<String, String>.from(model.tags);
     final newLines = List<LrcLine>.from(model.lines);
 
-    return LrcManipulator(tags: newTags, lines: newLines);
+    return LrcEditor(tags: newTags, lines: newLines);
   }
 
   // ===========================================================================
