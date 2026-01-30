@@ -1,5 +1,5 @@
 import 'package:antlr4/antlr4.dart';
-import '../model/lyrics_model.dart';
+import 'model/lyrics_model.dart';
 
 class LrcErrorListener extends BaseErrorListener {
   final List<LrcParseError> errors = [];

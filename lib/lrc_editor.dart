@@ -1,4 +1,4 @@
-import '../model/lyrics_model.dart';
+import 'src/model/lyrics_model.dart';
 
 /// A mutable wrapper around LRC data to allow editing, time-shifting,
 /// scaling, and re-exporting to string format.
