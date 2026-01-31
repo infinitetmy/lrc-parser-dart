@@ -83,7 +83,7 @@ class LrcParser {
           // to see a valid stream that ends here, or just enough to parse IDs.
           
           // Add EOF to simulate end of stream for the parser
-          headerTokens.removeRange(headerTokens.length - 2, headerTokens.length);
+          headerTokens.removeRange(headerTokens.length - 1, headerTokens.length);
           headerTokens.add(CommonToken(IntStream.EOF));
           break;
         } else {
@@ -94,7 +94,6 @@ class LrcParser {
         headerTokens.add(token);
       }
     }
-    print(headerTokens);
 
     // 2. Create a stream from our small list of tokens
     // We use a simple ListTokenSource logic wrapper
