@@ -1,12 +1,12 @@
 # Dart LRC Parser & Editor
 
-A Dart library for processing LRC lyrics files. This library supports parsing, validating, modifying, and exporting lyrics in **Normal** (line-level), **Extended** (word-level), and **Hybrid** formats.
+An ANTLR4-based Dart library for processing LRC lyrics files. This library supports parsing, validating, modifying, and exporting lyrics in **Normal** (line-level), **Extended** (word-level), and **Hybrid** formats.
 
 ## Features
 
 - **Parsing**: Handles mixed formats, duplicated tags, and overly precise timestamps.
 - **Validation**: Detects syntax errors, duplicate metadata keys, and logic errors.
-- **LrcEditor**: A powerful tool to:
+- **Editor**: A tool to:
   - Shift timestamps.
   - Scale playback speed (speed-up/slow-down).
   - Add new lyrics (both simple and word-synced).
@@ -15,11 +15,17 @@ A Dart library for processing LRC lyrics files. This library supports parsing, v
 
 ## Installation
 
-1.  Add the ANTLR runtime to your `pubspec.yaml`:
+1.  Add the ANTLR runtime to your `pubspec.yaml`.
 
 ```yaml
 dependencies:
   antlr4: 4.13.2
+```
+
+2.  Import the statement in your project.
+
+```dart
+import 'package:lrc_parser/lrc_parser.dart';
 ```
 
 ## Usage
@@ -60,7 +66,7 @@ void main() {
 
 ### 2. Error Handling
 
-The parser does not throw exceptions for malformed content; instead, it collects them in the `errors` list.
+The parser collects errors found in the `errors` list during the parsing process.
 
 ```dart
 if (lrcFile.errors.isNotEmpty) {
@@ -77,7 +83,7 @@ if (lrcFile.errors.isNotEmpty) {
 The `LrcEditor` allows you to modify an existing file or build one from scratch.
 
 ```dart
-import 'package:my_lrc_lib/lrc_editor.dart';
+import 'package:lrc_parser/lrc_parser.dart';
 
 // Initialize from parsed model
 final editor = LrcEditor.fromModel(lrcFile);
@@ -88,8 +94,8 @@ final editor = LrcEditor.fromModel(lrcFile);
 // --- Editing Metadata ---
 editor.artist = "New Artist";
 editor.length = Duration(minutes: 3, seconds: 45); // Sets [length:03:45]
-editor.tool = "MyDartApp"; // Sets [re:MyDartApp]
-editor.addCustomTag("source", "Internet");
+editor.tool = "Testing"; // Sets [re:Testing]
+editor.addCustomTag("any", "hello the world");
 
 // --- Editing Lyrics ---
 
@@ -131,11 +137,9 @@ String compactOutput = editor.format(isCollapsed: true);
 print(compactOutput);
 ```
 
-## Project Structure
+## Detail
+### Parser
 
-- `lrc_parser.dart`: Main entry point. Contains `LrcParser.parseString()`.
-- `lyrics_model.dart`: Data classes (`LrcFile`, `LrcLine`, `LrcWord`) and the `LrcParseError` class.
-- `lrc_editor.dart`: Logic for manipulating lyrics (Time shifting, adding lines, formatting).
-- `lrc_handler.dart`: ANTLR Visitor implementation that converts the Parse Tree into the Model and validates logic.
-- `lrc_error_listener.dart`: ANTLR Error Listener for capturing syntax errors.
-- `LRCMixedParser.dart` / `LRCMixedLexer.dart`: Generated ANTLR code.
+The core parsing logic of this library is built using **ANTLR4**.
+
+The files inside `lib/src/generated` are **generated** from the grammar files from another repository.

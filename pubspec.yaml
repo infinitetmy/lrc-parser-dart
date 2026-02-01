@@ -1,12 +1,10 @@
 name: lrc_parser
-description: A starting point for Dart libraries or applications.
+description: An ANTLR4-based library to parse, validate, and edit LRC lyrics file. Supports normal, word and hybrid level of lyrics with time-shifting capabilities.
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
-
+repository: https://github.com/infinitetmy/lrc-parser-dart
 environment:
   sdk: ^3.8.1
 
-# Add regular dependencies here.
 dependencies:
   antlr4: 4.13.2
 
