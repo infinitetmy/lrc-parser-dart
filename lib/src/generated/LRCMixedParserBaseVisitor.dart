@@ -51,7 +51,7 @@ class LRCMixedParserBaseVisitor<T> extends ParseTreeVisitor<T> implements LRCMix
   /// The default implementation returns the result of calling
   /// [visitChildren] on [ctx].
   @override
-  T? visitLyrics(LyricsContext ctx) => visitChildren(ctx);
+  T? visitLyrics1(Lyrics1Context ctx) => visitChildren(ctx);
   /// The default implementation returns the result of calling
   /// [visitChildren] on [ctx].
   @override
@@ -64,4 +64,8 @@ class LRCMixedParserBaseVisitor<T> extends ParseTreeVisitor<T> implements LRCMix
   /// [visitChildren] on [ctx].
   @override
   T? visitSubtimeTag(SubtimeTagContext ctx) => visitChildren(ctx);
+  /// The default implementation returns the result of calling
+  /// [visitChildren] on [ctx].
+  @override
+  T? visitLyrics(LyricsContext ctx) => visitChildren(ctx);
 }

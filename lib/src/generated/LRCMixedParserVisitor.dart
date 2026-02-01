@@ -55,10 +55,10 @@ abstract class LRCMixedParserVisitor<T> extends ParseTreeVisitor<T> {
   /// Return the visitor result.
   T? visitTimeTag(TimeTagContext ctx);
 
-  /// Visit a parse tree produced by [LRCMixedParser.lyrics].
+  /// Visit a parse tree produced by [LRCMixedParser.lyrics1].
   /// [ctx] the parse tree.
   /// Return the visitor result.
-  T? visitLyrics(LyricsContext ctx);
+  T? visitLyrics1(Lyrics1Context ctx);
 
   /// Visit a parse tree produced by [LRCMixedParser.lyrics2].
   /// [ctx] the parse tree.
@@ -74,4 +74,9 @@ abstract class LRCMixedParserVisitor<T> extends ParseTreeVisitor<T> {
   /// [ctx] the parse tree.
   /// Return the visitor result.
   T? visitSubtimeTag(SubtimeTagContext ctx);
+
+  /// Visit a parse tree produced by [LRCMixedParser.lyrics].
+  /// [ctx] the parse tree.
+  /// Return the visitor result.
+  T? visitLyrics(LyricsContext ctx);
 }

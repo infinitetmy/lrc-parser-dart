@@ -64,7 +64,7 @@ class LrcHandler extends LRCMixedParserBaseVisitor<void> {
     final buffer = StringBuffer();
     for (var i = 0; i < ctx.childCount; i++) {
       final child = ctx.getChild(i);
-      if (child is Lyrics2Context || child is LyricsContext) {
+      if (child is Lyrics1Context || child is Lyrics2Context) {
         buffer.write(child?.text ?? '');
       }
     }
