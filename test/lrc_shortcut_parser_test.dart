@@ -1,6 +1,6 @@
 
 import 'package:test/test.dart';
-import '../lib/lrc_parser.dart';
+import 'package:lrc_parser/lrc_parser.dart';
 
 void main() {
   group('Shortcut Parser Tests', () {

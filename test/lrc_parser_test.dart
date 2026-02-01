@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
-import '../lib/lrc_parser.dart';
-import '../lib/src/model/lyrics_model.dart';
+import 'package:lrc_parser/lrc_parser.dart';
 
 void main() {
   group('LrcParser Tests', () {
